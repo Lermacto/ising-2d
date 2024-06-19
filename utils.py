@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit, prange
+from numba import njit
 
 
 @njit  # Para que numba compile la función
@@ -30,7 +30,7 @@ def metropolis(S, prob):  # Aplica el algoritmo de Metropolis al estado S
     de = 0
     # La consigna dice que hay que aplicar el algoritmo de metrópolis por cada
     # sitio en la red, es decir, L cuadrado veces.
-    for n in range(S.size):
+    for _ in range(S.size):
         i, j = np.random.choice(
             S.shape[0], 2
         )  # Elegimos 2 posiciones al azar en el rango [0,L)
@@ -50,50 +50,18 @@ def metropolis(S, prob):  # Aplica el algoritmo de Metropolis al estado S
     return S, dm / S.size, de / S.size
 
 
-@njit
-def cor(S: np.ndarray) -> np.ndarray:
+def cor(S: np.ndarray) -> np.ndarray:  # Usando FFT es más rápido que con @njit
     L = S.shape[0]
-    cor_vec = np.zeros(L // 2)
-    for r, _ in enumerate(cor_vec):
-        cor_filas = np.zeros(L)
-        for i in prange(L):
-            fila = S[i]
-            fila_shift = np.roll(fila, r)
-            cor_filas[i] = np.sum(fila * fila_shift)
-        cor_vec[r] = np.sum(cor_filas)
-    return cor_vec / (L**2)
+    S_hat = np.fft.fft(S, axis=1)
+    cor = np.sum(np.fft.ifft(S_hat * S_hat.conj(), axis=1), axis=0)
+    return np.real(cor[: L // 2]) / S.size
 
 
-@njit
-def metropolis2(S: np.ndarray, prob: np.ndarray):
+def metropolis2_fft(S: np.ndarray, prob: np.ndarray):
     # Aplica el algoritmo de Metropolis al estado S
-    # if N == S.size:
-    #    return S, h(S), np.mean(S)
-    dm = 0
-    dc = np.zeros(S.shape[0] // 2)
+    c_original = cor(S)
     # La consigna dice que hay que aplicar el algoritmo de metrópolis por cada
     # sitio en la red, es decir, L cuadrado veces.
-    for _ in range(S.size):
-        i, j = np.random.choice(
-            S.shape[0], 2
-        )  # Elegimos 2 posiciones al azar en el rango [0,L)
-        sij = S[i, j]  # Obtenemos el spin de esa posición
-        opp_sij = -sij  # Obtenemos el spin opuesto al original
-        # dE_sij = calculate_dE(opp_sij, i, j, S) - calculate_dE(
-        #     sij, i, j, S
-        # )
-        dE_sij = calculate_dE(sij, i, j, S)
-        # La diferencia de energía al transicionar de sij a opp_sij
-        p = np.random.random(1)
-        c_viejo = cor(S)  # [Optim] Levantar de cuenta anterior?
-        if (
-            dE_sij <= 0
-            or (dE_sij == 4 and p < prob[0])
-            or (dE_sij == 8 and p < prob[1])
-        ):
-            S[i, j] = opp_sij
-            dm += opp_sij
-            dc += (
-                cor(S) - c_viejo
-            )  # [Optim] Se podría calcular la contribución especifica de este spin
-    return S, dm / S.size, dc / S.size
+    S, dm, _ = metropolis(S, prob)
+    dc = cor(S) - c_original
+    return S, dm, dc / S.size
