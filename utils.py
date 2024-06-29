@@ -1,5 +1,6 @@
 import numpy as np
 from numba import njit, prange
+from scipy.stats import norm
 import pandas as pd
 
 
