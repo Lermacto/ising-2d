@@ -2,6 +2,7 @@ import numpy as np
 from numba import njit, prange
 from scipy.stats import norm
 import pandas as pd
+from tqdm import tqdm
 
 
 @njit
@@ -52,7 +53,7 @@ usando las probabilidades provistas.
         ):
             S[i, j] = opp_sij  # El spin cambia de estado
             de += dE_sij
-            dm += opp_sij
+            dm += 2 * opp_sij
     return S, dm / S.size, de / S.size
 
 
