@@ -157,7 +157,7 @@ def get_n_from_matrix(L: int, T: float) -> int:
     # Cargamos los N precalculados
     df_n = pd.read_csv("LT_matrix.csv", index_col=0, dtype=float)
     df_n.columns = [int(L_str) for L_str in df_n.columns]
-    df_n = df_n.map(int)
+    df_n = df_n.applymap(int)
     # Extraemos los rangos de T y L y los valores de N para cada par (T, L)
     L_vals = df_n.columns.to_numpy(dtype=float)
     T_vals = df_n.index.to_numpy(dtype=float)
